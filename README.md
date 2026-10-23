@@ -117,3 +117,4 @@ npm run build
 
 ## 📄 라이선스
 MIT License — 학술 및 시연 목적 프로토타입 프로젝트입니다.
+# CV_AI
