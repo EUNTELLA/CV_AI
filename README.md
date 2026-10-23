@@ -105,16 +105,5 @@ npm run build
 
 ---
 
-## 🌐 GitHub & Vercel 배포 가이드
-
-### Vercel 원클릭 배포
-1. 저장소를 GitHub에 푸시합니다.
-2. Vercel 대시보드에서 `Add New Project` ➔ 해당 저장소를 선택합니다.
-3. Framework Preset: **Vite** 선택
-4. `vercel.json` 파일에 `/model/*` 캐시 및 라우팅 설정이 사전 구성되어 있으므로 별도 설정 없이 배포 완료됩니다.
-
----
-
 ## 📄 라이선스
 MIT License — 학술 및 시연 목적 프로토타입 프로젝트입니다.
-# CV_AI
