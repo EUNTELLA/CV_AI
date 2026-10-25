@@ -1,0 +1,13 @@
+{
+  "classes": [
+    "Blocked",
+    "Near",
+    "Safe"
+  ],
+  "imageSize": [
+    224,
+    224
+  ],
+  "inputRange": "0-255",
+  "modelType": "graph"
+}
