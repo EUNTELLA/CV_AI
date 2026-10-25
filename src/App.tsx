@@ -45,7 +45,7 @@ export const App: React.FC = () => {
         if (isMounted) {
           setModelState({
             status: 'ready',
-            modelName: 'SafeParkingAI MobileNet-Conv2D GraphModel v1.0',
+            modelName: 'MobileNetV2 V2 (Colab Transfer Learning)',
           });
           console.log('[SafeParkingAI] 모델 초기화 완료');
         }

@@ -40,9 +40,9 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       subColor: 'text-emerald-700',
       icon: ShieldCheck,
       iconColor: 'text-emerald-600',
-      title: '안전 주차 확인 (반납 가능)',
-      tagline: '보행자 및 점자블록을 방해하지 않는 안전한 주차 위치입니다.',
-      actionNotice: '시각장애인을 위한 안전한 보행 환경 조성에 동참해 주셔서 감사합니다.',
+      title: '시연용 반납 가능 (Safe 판정)',
+      tagline: '교육용 프로토타입 AI 모델이 안전 구역으로 예측한 상태입니다.',
+      actionNotice: '※ 본 모델은 검증 정확도 47.83%의 교육용 프로토타입이며, 모델 예측 결과가 실제 보행 안전을 보증하지 않습니다.',
     },
     BLOCKED: {
       borderColor: 'border-rose-300',
@@ -220,7 +220,7 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
           </li>
         </ul>
         <p className="text-[10px] text-slate-400 italic pt-1">
-          ※ 위 임계값은 초기 시연 설정이며, 실제 안전을 보증하는 법적 기준이 아닙니다.
+          ※ 본 AI 모델은 검증 정확도 47.83%의 교육용 프로토타입이며, 실제 안전을 보증하는 기준이 아닙니다.
         </p>
       </div>
 

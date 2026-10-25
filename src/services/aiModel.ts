@@ -3,13 +3,16 @@ import type { ModelPrediction, VerdictStatus } from '../types';
 
 let cachedModel: tf.GraphModel | null = null;
 let modelLoadingPromise: Promise<tf.GraphModel> | null = null;
+let modelLabels: string[] = ['Blocked', 'Near', 'Safe'];
 
 const MODEL_URL = '/model/model.json';
+const LABELS_URL = '/model/labels.json';
 const INPUT_SIZE = 224;
 
 /**
  * TensorFlow.js GraphModel 로드
- * - /model/model.json 위치에서 tf.loadGraphModel()로 로드합니다.
+ * - /model/model.json 위치에서 실제 Google Colab MobileNetV2 모델을 로드합니다.
+ * - /model/labels.json에서 클래스 순서를 확인합니다.
  * - 이미 로드된 경우 캐시된 인스턴스를 재사용합니다.
  */
 export async function loadParkingModel(): Promise<tf.GraphModel> {
@@ -25,9 +28,27 @@ export async function loadParkingModel(): Promise<tf.GraphModel> {
     try {
       await tf.ready();
       console.log(`[SafeParkingAI] TensorFlow.js 백엔드 준비 완료: ${tf.getBackend()}`);
-      
+
+      // labels.json 로드 시도
+      try {
+        const labelsRes = await fetch(LABELS_URL);
+        if (labelsRes.ok) {
+          const labelsData = await labelsRes.json();
+          if (Array.isArray(labelsData.classes) && labelsData.classes.length >= 3) {
+            modelLabels = labelsData.classes;
+            console.log('[SafeParkingAI] labels.json 로드 완료:', modelLabels);
+          }
+        }
+      } catch (labelErr) {
+        console.warn('[SafeParkingAI] labels.json 로드 생략 (기본값 사용):', labelErr);
+      }
+
+      // 실제 MobileNetV2 GraphModel 로드
       const model = await tf.loadGraphModel(MODEL_URL);
-      console.log('[SafeParkingAI] GraphModel 로드 성공:', MODEL_URL);
+      console.log('[SafeParkingAI] 실제 MobileNetV2 GraphModel 로드 성공:', MODEL_URL);
+      console.log('[SafeParkingAI] 입력 레이어 정보:', model.inputs);
+      console.log('[SafeParkingAI] 출력 레이어 정보:', model.outputs);
+
       cachedModel = model;
       return model;
     } catch (error) {
@@ -51,12 +72,20 @@ export function isModelLoaded(): boolean {
 }
 
 /**
+ * 로드된 레이블 목록 반환
+ */
+export function getModelLabels(): string[] {
+  return [...modelLabels];
+}
+
+/**
  * 입력 이미지를 분류하여 예측 확률 및 반납 판정 결과를 반환합니다.
  * 
  * - 입력 이미지 크기: 224×224
  * - 입력: RGB 이미지, float32, 픽셀 범위 0~255
- * - 정규화는 모델 내부에 포함되어 있으므로 JS에서 다시 정규화하지 않습니다.
- * - 출력 순서: Blocked, Near, Safe
+ * - 내부 정규화: 모델 내부 rescaling 레이어에서 (pixel / 127.5 - 1) 수행
+ *   (JavaScript에서 중복 정규화를 적용하지 않고 0~255 float32를 그대로 전달)
+ * - 출력 순서: labels.json 기준 [Blocked, Near, Safe]
  * - 메모리 누수 방지를 위해 모든 임시 Tensor를 즉시 dispose합니다.
  */
 export async function classifyParkingImage(
@@ -74,10 +103,12 @@ export async function classifyParkingImage(
 
   try {
     // 1. 픽셀 추출 -> 224x224 리사이즈 -> float32 [0..255] -> [1, 224, 224, 3]
+    // 주의: 모델 내부에 Rescaling(1/127.5, offset=-1)이 포함되어 있으므로
+    // JS에서는 다시 정규화하지 않고 0~255 범위의 float32 텐서로 전달합니다.
     inputTensor = tf.tidy(() => {
-      const fromPixels = tf.browser.fromPixels(imageElement); // [H, W, 3], uint8
+      const fromPixels = tf.browser.fromPixels(imageElement); // [H, W, 3], uint8 (0~255)
       const resized = tf.image.resizeBilinear(fromPixels, [INPUT_SIZE, INPUT_SIZE]); // [224, 224, 3]
-      const floatVal = resized.toFloat(); // float32, 0~255 (모델 내부에서 정규화)
+      const floatVal = resized.toFloat(); // float32, 0~255
       return floatVal.expandDims(0); // [1, 224, 224, 3]
     });
 
@@ -114,11 +145,11 @@ export async function classifyParkingImage(
     }
 
     console.log(
-      `[SafeParkingAI] 분석 완료 (${inferenceTimeMs}ms) | ` +
-      `Blocked: ${(blockedProb * 100).toFixed(1)}%, ` +
-      `Near: ${(nearProb * 100).toFixed(1)}%, ` +
-      `Safe: ${(safeProb * 100).toFixed(1)}% | ` +
-      `Risk: ${(riskProb * 100).toFixed(1)}% -> 판정: ${verdict}`
+      `[SafeParkingAI] MobileNetV2 추론 완료 (${inferenceTimeMs}ms) | ` +
+      `Blocked: ${(blockedProb * 100).toFixed(2)}%, ` +
+      `Near: ${(nearProb * 100).toFixed(2)}%, ` +
+      `Safe: ${(safeProb * 100).toFixed(2)}% | ` +
+      `Risk: ${(riskProb * 100).toFixed(2)}% -> 판정: ${verdict}`
     );
 
     return {

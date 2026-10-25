@@ -31,10 +31,10 @@ export const ReturnSuccessModal: React.FC<ReturnSuccessModalProps> = ({
             시연용 안전 반납 성공
           </div>
           <h2 className="text-xl font-bold text-slate-900 m-0">
-            반납이 정상적으로 승인되었습니다!
+            시연용 반납 처리가 완료되었습니다
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            점자블록을 방해하지 않는 배려 주차로 보행 약자의 안전을 지켰습니다.
+            교육용 프로토타입 모델의 시연 판정 결과입니다.
           </p>
         </div>
 
@@ -43,19 +43,19 @@ export const ReturnSuccessModal: React.FC<ReturnSuccessModalProps> = ({
           <div className="flex justify-between text-slate-500 pb-1.5 border-b border-slate-200">
             <span>AI 판정 점수</span>
             <span className="font-bold text-emerald-600">
-              안전 확률 {(prediction.safeProb * 100).toFixed(1)}% (적합)
+              안전 확률 {(prediction.safeProb * 100).toFixed(1)}% (시연 판정)
             </span>
           </div>
           <div className="flex justify-between text-slate-500">
             <span>보행 위험도(Risk)</span>
             <span className="font-mono text-slate-700">
-              {(prediction.riskProb * 100).toFixed(1)}% (안전 기준 통과)
+              {(prediction.riskProb * 100).toFixed(1)}% (시연 기준 통과)
             </span>
           </div>
           <div className="flex justify-between text-slate-500">
             <span>시각장애인 보행로 보호</span>
             <span className="font-semibold text-emerald-700 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> 이상 없음
+              <ShieldCheck className="w-3.5 h-3.5" /> 모델 Safe 분류
             </span>
           </div>
           <div className="flex justify-between text-slate-500 pt-1.5 border-t border-slate-200">
@@ -69,7 +69,7 @@ export const ReturnSuccessModal: React.FC<ReturnSuccessModalProps> = ({
         <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-[11px] text-amber-800 text-left flex items-start gap-2">
           <Heart className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
           <span>
-            이 화면은 <strong>시연용 가상 반납 완료 화면</strong>입니다. 실제 모빌리티 사의 결제/반납 서버와는 연동되지 않습니다.
+            이 화면은 <strong>교육용 프로토타입 가상 반납 화면</strong>입니다. 현재 모델의 검증 정확도는 47.83%이며 실제 안전을 보증하지 않습니다.
           </span>
         </div>
 

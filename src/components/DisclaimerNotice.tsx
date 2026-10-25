@@ -36,7 +36,7 @@ export const DisclaimerNotice: React.FC = () => {
             <span>모빌리티 API 미연동</span>
           </div>
           <p className="text-[11px] text-slate-500 m-0 leading-relaxed">
-            실제 전동 킥보드 운영사의 유료 반납 API와 연결되지 않은 학술·시연용 프로토타입 프로젝트입니다.
+            실제 전동 킥보드 운영사의 유료 반납 API와 연결되지 않은 학술·시연용 프로토타입 프로젝트입니다 (검증 정확도 47.83%).
           </p>
         </div>
       </div>
