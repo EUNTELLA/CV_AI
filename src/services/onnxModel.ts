@@ -6,9 +6,29 @@ import type {
   DetectedBraille,
 } from '../types';
 
-// WASM 정적 파일 경로 설정 (public 폴더 루트 배포)
-ort.env.wasm.wasmPaths = '/';
+// WASM 실행 환경 설정 (스레드 1로 제한하여 SharedArrayBuffer 격리 요구사항 완화)
 ort.env.wasm.numThreads = 1;
+
+let isWasmConfigured = false;
+async function configureWasmPath(): Promise<void> {
+  if (isWasmConfigured) return;
+  try {
+    const probe = await fetch('/ort-wasm-simd-threaded.jsep.mjs', { method: 'HEAD' });
+    const contentType = probe.headers.get('content-type') || '';
+    if (probe.ok && (contentType.includes('javascript') || !contentType.includes('html'))) {
+      ort.env.wasm.wasmPaths = '/';
+      console.log('[SafeParkingAI] 로컬 WASM 런타임 모듈 사용 (/)');
+      isWasmConfigured = true;
+      return;
+    }
+  } catch {
+    // ignore
+  }
+  // 로컬 파일이 아직 배포 중이거나 index.html로 rewrite되는 경우 동일 버전(1.31.1) CDN 자동 연결
+  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';
+  console.log('[SafeParkingAI] ONNX WASM 런타임 CDN(v1.31.1) 자동 폴백 활성화');
+  isWasmConfigured = true;
+}
 
 let scooterSession: ort.InferenceSession | null = null;
 let brailleSession: ort.InferenceSession | null = null;
@@ -61,6 +81,7 @@ export async function loadHybridModels(): Promise<void> {
 
   modelLoadingPromise = (async () => {
     try {
+      await configureWasmPath();
       console.log('[SafeParkingAI] 실제 YOLOv8 ONNX 모델 2종 로딩 시작...');
       const [sSess, bSess] = await Promise.all([
         createSessionFromUrl(SCOOTER_MODEL_URL, 'Scooter Detection ONNX'),
