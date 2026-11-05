@@ -4,11 +4,14 @@ import {
   Camera,
   X,
   Sparkles,
+  Eye,
+  Layers,
 } from 'lucide-react';
 import type { SampleImage } from '../types';
 
 interface ImageUploaderProps {
   selectedImage: string | null;
+  overlayImageUrl?: string | null;
   onImageSelect: (imageUrl: string, sourceName?: string) => void;
   onClearImage: () => void;
   onOpenCamera: () => void;
@@ -17,41 +20,42 @@ interface ImageUploaderProps {
 
 const SAMPLE_PRESETS: SampleImage[] = [
   {
-    id: 'safe',
-    name: '안전 구역 주차',
-    badge: '정상 (초록)',
-    description: '점자블록과 충분한 이격 거리를 확보한 전용 구역',
-    path: '/samples/safe.png',
-    expectedVerdict: 'SAFE',
+    id: 'real_violation',
+    name: '점자블록 침범 (실제 사진)',
+    badge: '침범 의심 (위험)',
+    description: '점자블록 위에 킥보드가 직접 거치된 실제 주차 사진',
+    path: '/samples/real_violation.jpg',
+    expectedVerdict: 'BLOCKED',
   },
   {
-    id: 'blocked',
-    name: '점자블록 침범',
-    badge: '위험 (빨강)',
-    description: '시각장애인 점자블록 위에 직접 거치된 상태',
-    path: '/samples/blocked.png',
-    expectedVerdict: 'BLOCKED',
+    id: 'real_scooter',
+    name: '점자블록 미탐지 (실제 사진)',
+    badge: '추가 확인 (주의)',
+    description: '킥보드가 있으나 바닥 점자블록이 감지되지 않는 실제 사진',
+    path: '/samples/real_scooter.jpg',
+    expectedVerdict: 'UNCLEAR',
   },
   {
     id: 'near',
-    name: '점자블록 인근',
-    badge: '주의 (빨강/주황)',
-    description: '보행 유도 블록 30cm 이내 근접하여 통행 방해',
+    name: '점자블록 인근 (시연)',
+    badge: '추가 확인 (주의)',
+    description: '보행 유도 블록 근접 거치 상태',
     path: '/samples/near.png',
-    expectedVerdict: 'BLOCKED',
+    expectedVerdict: 'UNCLEAR',
   },
   {
-    id: 'unclear',
-    name: '야간/흐림 (재촬영)',
-    badge: '확인 필요 (노랑)',
-    description: '조도가 어둡거나 식별이 불명확한 사진',
-    path: '/samples/unclear.png',
-    expectedVerdict: 'UNCLEAR',
+    id: 'safe',
+    name: '안전 구역 주차 (시연)',
+    badge: '정상 (초록)',
+    description: '점자블록과 충분한 이격 거리를 확보한 구역',
+    path: '/samples/safe.png',
+    expectedVerdict: 'SAFE',
   },
 ];
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({
   selectedImage,
+  overlayImageUrl,
   onImageSelect,
   onClearImage,
   onOpenCamera,
@@ -59,6 +63,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,7 +76,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       };
       reader.readAsDataURL(file);
     }
-    // reset input value so re-selecting same file works
     if (e.target) e.target.value = '';
   };
 
@@ -98,6 +102,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       reader.readAsDataURL(file);
     }
   };
+
+  // 표시할 이미지: 분석 완료 후 오버레이가 있고 원본 보기가 꺼져있으면 overlayImageUrl 표시
+  const displayImage = overlayImageUrl && !showOriginal ? overlayImageUrl : selectedImage;
 
   return (
     <div className="space-y-4">
@@ -158,29 +165,34 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-400 pt-1">
-              ※ 업로드된 사진은 서버로 전송되지 않으며, 기기 내에서만 안전하게 분석됩니다.
+              ※ 업로드된 사진은 서버로 전송되지 않으며, 기기 브라우저(ONNX WebAssembly) 내에서만 안전하게 분석됩니다.
             </p>
           </div>
         </div>
       ) : (
         /* Preview Card */
         <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-md">
-          <div className="relative aspect-4/3 sm:aspect-16/10 max-h-[380px] w-full flex items-center justify-center bg-black/90">
-            <img
-              src={selectedImage}
-              alt="반납 사진 미리보기"
-              className="max-h-full max-w-full object-contain"
-            />
+          <div className="relative aspect-4/3 sm:aspect-16/10 max-h-[400px] w-full flex items-center justify-center bg-black/90">
+            {displayImage && (
+              <img
+                src={displayImage}
+                alt="반납 사진 미리보기"
+                className="max-h-full max-w-full object-contain"
+              />
+            )}
 
-            {/* Viewfinder Overlay */}
-            <div className="absolute inset-4 sm:inset-6 border border-white/20 rounded-xl pointer-events-none flex flex-col justify-between p-3">
-              <span className="text-[11px] font-semibold text-white/70 bg-black/50 px-2 py-0.5 rounded-sm w-fit backdrop-blur-xs">
-                분석 대기 이미지 (224×224 리사이징 예정)
-              </span>
-              <div className="flex justify-between items-end text-[10px] text-white/50">
-                <span>Safe Parking AI Vision</span>
-                <span>RGB 3-Channel</span>
-              </div>
+            {/* Overlay Indicator Tag */}
+            <div className="absolute top-3 left-3 flex items-center gap-2">
+              {overlayImageUrl ? (
+                <span className="text-[11px] font-bold text-white bg-slate-900/80 border border-white/20 px-2.5 py-1 rounded-lg backdrop-blur-xs flex items-center gap-1.5 shadow-sm">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  {showOriginal ? '원본 사진' : 'AI 객체 탐지 & 세그멘테이션 오버레이'}
+                </span>
+              ) : (
+                <span className="text-[11px] font-semibold text-white/80 bg-black/50 px-2 py-0.5 rounded-sm backdrop-blur-xs">
+                  분석 대기 이미지 (640×640 Letterbox 전처리 예정)
+                </span>
+              )}
             </div>
 
             {/* Delete / Change Button */}
@@ -193,11 +205,47 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
                 <X className="w-4 h-4" />
               </button>
             )}
+
+            {/* Legend Tag when overlay is showing */}
+            {overlayImageUrl && !showOriginal && (
+              <div className="absolute bottom-3 left-3 flex items-center gap-2 bg-black/70 px-2.5 py-1 rounded-lg backdrop-blur-xs text-[10px] text-white">
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-xs bg-red-500 inline-block" />
+                  킥보드 (빨강 박스)
+                </span>
+                <span className="text-white/40">|</span>
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-xs bg-yellow-400 inline-block" />
+                  점자블록 (노란 마스크)
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Quick Change Bar under preview */}
-          <div className="bg-slate-800/90 px-4 py-2 flex items-center justify-between text-xs text-slate-300">
-            <span className="truncate max-w-[200px]">등록된 반납 사진</span>
+          <div className="bg-slate-800/95 px-4 py-2.5 flex items-center justify-between text-xs text-slate-300">
+            <div className="flex items-center gap-2">
+              {overlayImageUrl && (
+                <button
+                  type="button"
+                  onClick={() => setShowOriginal(!showOriginal)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-colors cursor-pointer"
+                >
+                  {showOriginal ? (
+                    <>
+                      <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>AI 오버레이 보기</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 text-slate-300" />
+                      <span>원본 사진 보기</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <button
                 onClick={onOpenCamera}

@@ -6,9 +6,10 @@ import {
   RotateCcw,
   CheckCircle,
   Ban,
-  Info,
   Activity,
   ArrowRight,
+  Layers,
+  HelpCircle,
 } from 'lucide-react';
 import type { ModelPrediction } from '../types';
 
@@ -23,52 +24,56 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
   onRetake,
   onCompleteReturn,
 }) => {
-  const { blockedProb, nearProb, safeProb, riskProb, verdict, inferenceTimeMs } =
-    prediction;
+  const {
+    scooters,
+    brailleBlocks,
+    verdict,
+    statusText,
+    summary,
+    inferenceTimeMs,
+    hasViolation,
+    overlappingPixels,
+  } = prediction;
 
-  // 상태별 테마 구성 (빨강: BLOCKED, 노랑: UNCLEAR, 초록: SAFE)
   const isSafe = verdict === 'SAFE';
   const isBlocked = verdict === 'BLOCKED';
 
   const themeConfig = {
     SAFE: {
       borderColor: 'border-emerald-300',
-      bgColor: 'bg-emerald-50/60',
-      badgeBg: 'bg-emerald-500',
+      bgColor: 'bg-emerald-50/70',
+      badgeBg: 'bg-emerald-600',
       badgeText: 'text-white',
-      titleColor: 'text-emerald-900',
-      subColor: 'text-emerald-700',
+      titleColor: 'text-emerald-950',
+      subColor: 'text-emerald-800',
       icon: ShieldCheck,
       iconColor: 'text-emerald-600',
-      title: '시연용 반납 가능 (Safe 판정)',
-      tagline: '교육용 프로토타입 AI 모델이 안전 구역으로 예측한 상태입니다.',
-      actionNotice: '※ 본 모델은 검증 정확도 47.83%의 교육용 프로토타입이며, 모델 예측 결과가 실제 보행 안전을 보증하지 않습니다.',
+      title: '정상 주차 판정 (시연용 반납 가능)',
+      tagline: '킥보드와 점자블록이 모두 인식되었으며 충분한 이격 거리가 확보되었습니다.',
     },
     BLOCKED: {
-      borderColor: 'border-rose-300',
-      bgColor: 'bg-rose-50/60',
+      borderColor: 'border-rose-400',
+      bgColor: 'bg-rose-50/70',
       badgeBg: 'bg-rose-600',
       badgeText: 'text-white',
-      titleColor: 'text-rose-900',
-      subColor: 'text-rose-700',
+      titleColor: 'text-rose-950',
+      subColor: 'text-rose-800',
       icon: ShieldAlert,
       iconColor: 'text-rose-600',
-      title: '반납 제한 (위험 구역 감지)',
-      tagline: '점자블록 침범 또는 인근 보행 방해 위치로 판정되었습니다.',
-      actionNotice: '점자블록 위 주차는 시각장애인에게 심각한 안전 위협이 됩니다. 킥보드를 안전 구역으로 이동 후 다시 촬영해 주세요.',
+      title: '침범 의심 (반납 차단)',
+      tagline: '킥보드 하단 접지부가 점자블록 마스크와 겹치는 것으로 분석되었습니다.',
     },
     UNCLEAR: {
       borderColor: 'border-amber-300',
-      bgColor: 'bg-amber-50/60',
+      bgColor: 'bg-amber-50/70',
       badgeBg: 'bg-amber-500',
-      badgeText: 'text-slate-900',
+      badgeText: 'text-slate-950',
       titleColor: 'text-amber-950',
       subColor: 'text-amber-800',
       icon: AlertTriangle,
       iconColor: 'text-amber-600',
-      title: '확인 필요 (재촬영 권장)',
-      tagline: '주변 바닥 환경이나 점자블록 유무를 명확히 판별하기 어렵습니다.',
-      actionNotice: '조명, 각도 또는 거리를 조정하여 킥보드 바퀴와 주변 바닥이 선명하게 보이도록 다시 촬영해 주세요.',
+      title: '추가 확인 필요 (재촬영 권장)',
+      tagline: '점자블록에 근접해 있거나, 대상 객체 중 일부가 탐지되지 않았습니다.',
     },
   }[verdict];
 
@@ -97,11 +102,11 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
               <span
                 className={`text-xs font-bold px-2 py-0.5 rounded-md ${themeConfig.badgeBg} ${themeConfig.badgeText}`}
               >
-                {isSafe ? '정상 판정' : isBlocked ? '위험 판정' : '확인 필요'}
+                {isBlocked ? '침범 의심 (위험)' : isSafe ? '정상 판정' : '추가 확인 (주의)'}
               </span>
               <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1">
                 <Activity className="w-3 h-3 text-slate-400" />
-                추론 {inferenceTimeMs}ms
+                ONNX 추론 {inferenceTimeMs}ms
               </span>
             </div>
             <h2 className={`text-lg sm:text-xl font-bold mt-1 m-0 ${themeConfig.titleColor}`}>
@@ -113,164 +118,187 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
           </div>
         </div>
 
-        {/* Risk / Safe Summary Pill */}
-        <div className="bg-white/80 backdrop-blur-xs px-3.5 py-2 rounded-xl border border-slate-200/80 text-right self-start sm:self-auto shrink-0">
+        {/* Quick Summary Pill */}
+        <div className="bg-white/90 backdrop-blur-xs px-3.5 py-2.5 rounded-xl border border-slate-200/80 self-start sm:self-auto shrink-0 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500">
-            위험도 (Risk = Blocked + Near)
+            AI 객체 인식 결과
           </div>
-          <div className="flex items-baseline justify-end gap-1.5 mt-0.5">
-            <span
-              className={`text-xl font-extrabold ${
-                riskProb >= 0.5 ? 'text-rose-600' : 'text-slate-700'
-              }`}
-            >
-              {(riskProb * 100).toFixed(1)}%
+          <div className="flex items-center gap-3 mt-1 text-xs font-bold">
+            <span className="flex items-center gap-1 text-rose-600">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              킥보드 {scooters.length}대
             </span>
-            <span className="text-xs text-slate-400">
-              {riskProb >= 0.5 ? '(임계치 50% 초과)' : '(안전 기준 충족)'}
+            <span className="text-slate-300">|</span>
+            <span className="flex items-center gap-1 text-amber-600">
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              점자블록 {brailleBlocks.length}개
             </span>
           </div>
         </div>
       </div>
 
-      {/* Probability Graphs */}
-      <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs space-y-3">
-        <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1">
-          <span>AI 클래스별 예측 확률 그래프</span>
-          <span className="text-[11px] font-normal text-slate-400">
-            TensorFlow.js Softmax 출력
-          </span>
-        </div>
-
-        {/* 1. Blocked Probability Bar (Red) */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs">
-            <span className="font-semibold text-rose-700 flex items-center gap-1">
+      {/* Detection & Spatial Relationship Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Scooter Detection Card */}
+        <div className="bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-xs bg-rose-500" />
-              Blocked (점자블록 직접 침범)
+              킥보드 탐지 (Scooter BBox)
             </span>
-            <span className="font-mono font-bold text-rose-700">
-              {(blockedProb * 100).toFixed(1)}%
+            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-sm bg-rose-50 text-rose-700 border border-rose-200">
+              {scooters.length > 0 ? `${scooters.length}대 감지` : '미탐지'}
             </span>
           </div>
-          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
-            <div
-              className="h-full bg-rose-500 rounded-full transition-all duration-700 ease-out"
-              style={{ width: `${Math.min(100, blockedProb * 100)}%` }}
-            />
-          </div>
+
+          {scooters.length > 0 ? (
+            <div className="space-y-1.5 pt-1">
+              {scooters.map((s, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/60"
+                >
+                  <span className="font-medium text-slate-700">
+                    #{idx + 1} 킥보드
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-slate-600">
+                      신뢰도 {(s.score * 100).toFixed(1)}%
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm ${
+                        s.isViolating
+                          ? 'bg-rose-100 text-rose-800'
+                          : s.isNear
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      {s.isViolating ? '하단 침범' : s.isNear ? '근접' : '안전'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 m-0 py-2 text-center">
+              사진에서 킥보드가 감지되지 않았습니다.
+            </p>
+          )}
         </div>
 
-        {/* 2. Near Probability Bar (Orange/Amber) */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs">
-            <span className="font-semibold text-amber-700 flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-xs bg-amber-500" />
-              Near (점자블록 30cm 이내 근접)
+        {/* Braille Segmentation Card */}
+        <div className="bg-white rounded-xl p-3.5 border border-slate-200/90 shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-amber-400" />
+              점자블록 분할 (Braille Mask)
             </span>
-            <span className="font-mono font-bold text-amber-700">
-              {(nearProb * 100).toFixed(1)}%
+            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-sm bg-amber-50 text-amber-700 border border-amber-200">
+              {brailleBlocks.length > 0 ? `${brailleBlocks.length}개 영역` : '미탐지'}
             </span>
           </div>
-          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
-            <div
-              className="h-full bg-amber-500 rounded-full transition-all duration-700 ease-out"
-              style={{ width: `${Math.min(100, nearProb * 100)}%` }}
-            />
-          </div>
-        </div>
 
-        {/* 3. Safe Probability Bar (Emerald Green) */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs">
-            <span className="font-semibold text-emerald-700 flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500" />
-              Safe (안전 구역 주차)
-            </span>
-            <span className="font-mono font-bold text-emerald-700">
-              {(safeProb * 100).toFixed(1)}%
-            </span>
-          </div>
-          <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60">
-            <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-out"
-              style={{ width: `${Math.min(100, safeProb * 100)}%` }}
-            />
-          </div>
+          {brailleBlocks.length > 0 ? (
+            <div className="space-y-1.5 pt-1">
+              {brailleBlocks.map((b, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/60"
+                >
+                  <span className="font-medium text-slate-700">
+                    #{idx + 1} 점자블록
+                  </span>
+                  <span className="font-mono text-slate-600">
+                    신뢰도 {(b.score * 100).toFixed(1)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 m-0 py-2 text-center">
+              바닥 점자블록이 감지되지 않았습니다.
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Decision Logic & Criteria Guide */}
-      <div className="text-xs bg-white/70 rounded-xl p-3 border border-slate-200 space-y-1.5 text-slate-600">
-        <div className="font-semibold text-slate-800 flex items-center gap-1.5">
-          <Info className="w-3.5 h-3.5 text-slate-500" />
-          <span>시연 판정 기준 로직</span>
+      {/* Spatial Relationship Detailed Report */}
+      <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-xs space-y-2">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+          <Layers className="w-4 h-4 text-blue-600" />
+          <span>공간 관계 분석: 킥보드 하단 접지부 vs 점자블록 마스크</span>
         </div>
-        <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-600 pl-1">
-          <li>
-            <strong className="text-rose-700">반납 제한:</strong> 위험 확률(Risk = Blocked + Near)이{' '}
-            <strong>50% 이상</strong>인 경우
-          </li>
-          <li>
-            <strong className="text-emerald-700">반납 가능:</strong> 안전 확률(Safe)이{' '}
-            <strong>80% 이상</strong>인 경우
-          </li>
-          <li>
-            <strong className="text-amber-700">재촬영 요청:</strong> 위 두 조건에 해당하지 않는 경계 영역인 경우
-          </li>
-        </ul>
-        <p className="text-[10px] text-slate-400 italic pt-1">
-          ※ 본 AI 모델은 검증 정확도 47.83%의 교육용 프로토타입이며, 실제 안전을 보증하는 기준이 아닙니다.
+        <p className="text-xs text-slate-600 m-0 leading-relaxed font-medium">
+          {statusText}
+        </p>
+        <p className="text-[11px] text-slate-500 m-0">
+          {summary}
+        </p>
+
+        {hasViolation && (
+          <div className="mt-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
+            <span className="font-bold text-rose-700">⚠️ 침범 감지:</span>
+            <span>
+              킥보드 바퀴/스탠드 하단 접지 영역 내 점자블록 마스크 픽셀 겹침 ({overlappingPixels}px)
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Auxiliary Warning & Criteria */}
+      <div className="text-xs bg-white/80 rounded-xl p-3 border border-slate-200 space-y-1 text-slate-600">
+        <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+          <HelpCircle className="w-3.5 h-3.5 text-slate-500" />
+          <span>보조적 인공지능 탐지 안내</span>
+        </div>
+        <p className="text-[11px] text-slate-500 m-0 leading-relaxed">
+          • 본 서비스는 YOLOv8 Detection 및 Segmentation 모델을 활용한 <strong>보조적인 위험 탐지 프로토타입</strong>이며, 실제 보행 안전을 법적으로 보증하지 않습니다.
+        </p>
+        <p className="text-[11px] text-slate-500 m-0 leading-relaxed">
+          • 점자블록 또는 킥보드가 감지되지 않은 경우, 안전을 보장할 수 없으므로 <strong>자동 안전 판정을 금지</strong>하고 추가 확인을 요청합니다.
         </p>
       </div>
 
-      {/* Action Guidance & Buttons */}
-      <div className="pt-1 space-y-3">
-        <div className="text-xs sm:text-sm font-medium text-slate-800 bg-white/90 p-3 rounded-xl border border-slate-200">
-          <p className="m-0 leading-relaxed">{themeConfig.actionNotice}</p>
-        </div>
+      {/* Action Buttons */}
+      <div className="pt-1 flex flex-col sm:flex-row items-center gap-2.5">
+        <button
+          onClick={onRetake}
+          type="button"
+          className="w-full sm:w-1/2 px-4 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+        >
+          <RotateCcw className="w-4 h-4 text-slate-600" />
+          다시 촬영하기
+        </button>
 
-        <div className="flex flex-col sm:flex-row items-center gap-2.5">
-          {/* Re-take Button */}
-          <button
-            onClick={onRetake}
-            type="button"
-            className="w-full sm:w-1/2 px-4 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4 text-slate-600" />
-            다시 촬영하기
-          </button>
-
-          {/* Complete Return Button (Disabled when not Safe) */}
-          <button
-            onClick={onCompleteReturn}
-            type="button"
-            disabled={!isSafe}
-            className={`w-full sm:w-1/2 px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all ${
-              isSafe
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer hover:shadow-emerald-600/20 hover:scale-[1.01]'
-                : 'bg-slate-200 text-slate-400 border border-slate-300/60 cursor-not-allowed opacity-80'
-            }`}
-            title={
-              isSafe
-                ? '시연용 반납을 완료합니다'
-                : '안전 주차가 확인되지 않아 반납 버튼이 비활성화되었습니다'
-            }
-          >
-            {isSafe ? (
-              <>
-                <CheckCircle className="w-4 h-4" />
-                시연용 반납 완료하기
-                <ArrowRight className="w-4 h-4" />
-              </>
-            ) : (
-              <>
-                <Ban className="w-4 h-4 text-slate-400" />
-                반납 불가 (안전 구역 필요)
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={onCompleteReturn}
+          type="button"
+          disabled={!isSafe}
+          className={`w-full sm:w-1/2 px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all ${
+            isSafe
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer hover:shadow-emerald-600/20 hover:scale-[1.01]'
+              : 'bg-slate-200 text-slate-400 border border-slate-300/60 cursor-not-allowed opacity-80'
+          }`}
+          title={
+            isSafe
+              ? '시연용 반납을 완료합니다'
+              : '안전 이격이 확인되지 않아 반납 버튼이 비활성화되었습니다.'
+          }
+        >
+          {isSafe ? (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              시연용 반납 완료하기
+              <ArrowRight className="w-4 h-4" />
+            </>
+          ) : (
+            <>
+              <Ban className="w-4 h-4 text-slate-400" />
+              반납 불가 (안전 구역 필요)
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

@@ -1,0 +1,12 @@
+{
+  "model": "scooter_detection",
+  "task": "detect",
+  "classes": [
+    "scooter",
+    "brailleblock"
+  ],
+  "imageSize": 640,
+  "inputNormalization": "RGB / 255",
+  "preprocessing": "letterbox",
+  "nmsIncluded": false
+}

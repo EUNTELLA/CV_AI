@@ -22,7 +22,7 @@ export const Header: React.FC<HeaderProps> = ({ modelState, onOpenGuide }) => {
                 Safe Parking AI
               </h1>
               <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-sm bg-emerald-100 text-emerald-800 tracking-wider">
-                Demo
+                YOLOv8 ONNX
               </span>
             </div>
             <p className="text-xs text-slate-500 m-0 font-medium">
@@ -38,13 +38,13 @@ export const Header: React.FC<HeaderProps> = ({ modelState, onOpenGuide }) => {
             {modelState.status === 'ready' && (
               <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border-emerald-200">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>TFJS 모델 준비완료</span>
+                <span>YOLOv8 ONNX 준비완료</span>
               </span>
             )}
             {modelState.status === 'loading' && (
               <span className="flex items-center gap-1.5 text-blue-700 bg-blue-50 border-blue-200">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                <span>AI 모델 로딩 중...</span>
+                <span>ONNX 모델 로딩 중...</span>
               </span>
             )}
             {modelState.status === 'error' && (
@@ -74,13 +74,13 @@ export const Header: React.FC<HeaderProps> = ({ modelState, onOpenGuide }) => {
       {modelState.status === 'loading' && (
         <div className="sm:hidden bg-blue-50 border-t border-blue-100 px-4 py-1.5 text-center text-xs text-blue-700 flex items-center justify-center gap-1.5">
           <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-          <span>TensorFlow.js AI 모델 로딩 중...</span>
+          <span>YOLOv8 ONNX AI 모델 로딩 중...</span>
         </div>
       )}
       {modelState.status === 'error' && (
         <div className="sm:hidden bg-rose-50 border-t border-rose-100 px-4 py-1.5 text-center text-xs text-rose-700 flex items-center justify-center gap-1.5">
           <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
-          <span>AI 모델 로딩 실패 (/model/model.json)</span>
+          <span>ONNX 모델 로딩 실패 (/models/hybrid-v1/)</span>
         </div>
       )}
     </header>

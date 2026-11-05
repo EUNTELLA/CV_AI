@@ -34,28 +34,28 @@ export const ReturnSuccessModal: React.FC<ReturnSuccessModalProps> = ({
             시연용 반납 처리가 완료되었습니다
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            교육용 프로토타입 모델의 시연 판정 결과입니다.
+            YOLOv8 Detection 및 Segmentation 기반 분석 결과입니다.
           </p>
         </div>
 
         {/* Simulated Receipt Card */}
         <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 text-left space-y-2 text-xs">
           <div className="flex justify-between text-slate-500 pb-1.5 border-b border-slate-200">
-            <span>AI 판정 점수</span>
-            <span className="font-bold text-emerald-600">
-              안전 확률 {(prediction.safeProb * 100).toFixed(1)}% (시연 판정)
+            <span>AI 인식 결과</span>
+            <span className="font-bold text-emerald-700">
+              킥보드 {prediction.scooters.length}대 / 점자블록 {prediction.brailleBlocks.length}개
             </span>
           </div>
           <div className="flex justify-between text-slate-500">
-            <span>보행 위험도(Risk)</span>
-            <span className="font-mono text-slate-700">
-              {(prediction.riskProb * 100).toFixed(1)}% (시연 기준 통과)
+            <span>하단 접지 침범 여부</span>
+            <span className="font-semibold text-emerald-700 flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" /> 이상 없음 (미침범)
             </span>
           </div>
           <div className="flex justify-between text-slate-500">
             <span>시각장애인 보행로 보호</span>
-            <span className="font-semibold text-emerald-700 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> 모델 Safe 분류
+            <span className="font-semibold text-emerald-700">
+              안전 이격 거리 확보
             </span>
           </div>
           <div className="flex justify-between text-slate-500 pt-1.5 border-t border-slate-200">
@@ -69,7 +69,7 @@ export const ReturnSuccessModal: React.FC<ReturnSuccessModalProps> = ({
         <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl text-[11px] text-amber-800 text-left flex items-start gap-2">
           <Heart className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
           <span>
-            이 화면은 <strong>교육용 프로토타입 가상 반납 화면</strong>입니다. 현재 모델의 검증 정확도는 47.83%이며 실제 안전을 보증하지 않습니다.
+            이 화면은 <strong>교육용 프로토타입 가상 반납 화면</strong>입니다. 보조적 비전 분석 결과이며 실제 보행 안전을 보증하지 않습니다.
           </span>
         </div>
 

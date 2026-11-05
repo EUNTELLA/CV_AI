@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 import type { ModelState, ModelPrediction } from './types';
-import { loadParkingModel, classifyParkingImage } from './services/aiModel';
+import { loadHybridModels, runHybridParkingInference } from './services/onnxModel';
 import { Header } from './components/Header';
 import { ImageUploader } from './components/ImageUploader';
 import { VerdictCard } from './components/VerdictCard';
@@ -20,8 +20,8 @@ import { DisclaimerNotice } from './components/DisclaimerNotice';
 export const App: React.FC = () => {
   // State
   const [modelState, setModelState] = useState<ModelState>({ status: 'idle' });
-  const [selectedImage, setSelectedImage] = useState<string | null>('/samples/safe.png');
-  const [selectedImageName, setSelectedImageName] = useState<string>('안전 구역 주차 (기본 샘플)');
+  const [selectedImage, setSelectedImage] = useState<string | null>('/samples/real_violation.jpg');
+  const [selectedImageName, setSelectedImageName] = useState<string>('점자블록 침범 (실제 사진)');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<ModelPrediction | null>(null);
@@ -31,23 +31,23 @@ export const App: React.FC = () => {
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState<boolean>(false);
 
-  // Ref to image element used for TensorFlow.js extraction
+  // Ref to image element used for inference
   const previewImgRef = useRef<HTMLImageElement>(null);
 
-  // 1. 컴포넌트 마운트 시 TensorFlow.js GraphModel 로드
+  // 1. 컴포넌트 마운트 시 실제 YOLOv8 ONNX 모델 2종 로드
   useEffect(() => {
     let isMounted = true;
 
-    async function initModel() {
+    async function initModels() {
       setModelState({ status: 'loading' });
       try {
-        await loadParkingModel();
+        await loadHybridModels();
         if (isMounted) {
           setModelState({
             status: 'ready',
-            modelName: 'MobileNetV2 V2 (Colab Transfer Learning)',
+            modelName: 'YOLOv8 Hybrid v1 (Scooter Det + Braille Seg)',
           });
-          console.log('[SafeParkingAI] 모델 초기화 완료');
+          console.log('[SafeParkingAI] ONNX 모델 2종 초기화 완료');
         }
       } catch (err: any) {
         if (isMounted) {
@@ -56,13 +56,13 @@ export const App: React.FC = () => {
             status: 'error',
             message:
               err?.message ||
-              '모델 파일(/model/model.json 및 group1-shard1of1.bin) 로드 실패',
+              '모델 파일(/models/hybrid-v1/scooter_detection.onnx 및 braille_segmentation.onnx) 로드 실패',
           });
         }
       }
     }
 
-    initModel();
+    initModels();
 
     return () => {
       isMounted = false;
@@ -85,7 +85,7 @@ export const App: React.FC = () => {
     setAnalysisError(null);
   };
 
-  // 4. AI 분석 실행
+  // 4. AI 분석 실행 (YOLOv8 Detection + Segmentation 추론)
   const handleStartAnalysis = async () => {
     if (!selectedImage || !previewImgRef.current) {
       setAnalysisError('분석할 이미지를 먼저 선택해 주세요.');
@@ -111,8 +111,8 @@ export const App: React.FC = () => {
         });
       }
 
-      // TensorFlow.js GraphModel 추론 실행
-      const result = await classifyParkingImage(img);
+      // ONNX Runtime Web 기반 하이브리드 추론 실행
+      const result = await runHybridParkingInference(img);
       setPrediction(result);
     } catch (err: any) {
       console.error('[SafeParkingAI] 추론 오류:', err);
@@ -127,17 +127,14 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-emerald-500 selection:text-white">
-      {/* Hidden image element strictly used for TensorFlow.js fromPixels */}
+      {/* Hidden image element strictly used for extraction */}
       {selectedImage && (
         <img
           ref={previewImgRef}
           src={selectedImage}
-          alt="TFJS Input Source"
+          alt="ONNX Input Source"
           crossOrigin="anonymous"
           className="hidden"
-          onLoad={() => {
-            // 이미지 로드 완료 시 준비
-          }}
         />
       )}
 
@@ -154,14 +151,27 @@ export const App: React.FC = () => {
           <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 space-y-2">
             <div className="flex items-center gap-2 font-bold text-sm">
               <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0" />
-              <span>AI 모델 로딩 실패 안내</span>
+              <span>실제 AI 모델 로딩 실패 안내</span>
             </div>
-            <p className="text-xs text-rose-800 m-0 leading-relaxed">
+            <p className="text-xs text-rose-800 m-0 leading-relaxed font-mono">
               {modelState.message}
             </p>
+            <div className="p-3 bg-white/80 rounded-xl border border-rose-200 text-xs space-y-1">
+              <p className="font-bold text-rose-900 m-0">확인 필요한 모델 파일:</p>
+              <ul className="list-disc list-inside text-rose-800 text-[11px] m-0 pl-1">
+                <li><code>/models/hybrid-v1/scooter_detection.onnx</code></li>
+                <li><code>/models/hybrid-v1/braille_segmentation.onnx</code></li>
+              </ul>
+            </div>
             <p className="text-[11px] text-rose-700 font-semibold m-0">
-              ※ Safe Parking AI 지침에 따라 모델이 없거나 로딩에 실패한 경우 가짜 예측 결과를 일체 표시하지 않습니다.
+              ※ Safe Parking AI는 MOCK 모델이나 가짜 예측값으로 대체하지 않으며, 실제 모델이 로드되지 않으면 분석을 실행하지 않습니다.
             </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer"
+            >
+              다시 시도하기
+            </button>
           </div>
         )}
 
@@ -171,15 +181,15 @@ export const App: React.FC = () => {
           <div className="relative z-10 space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-medium text-emerald-200">
               <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-              TensorFlow.js 딥러닝 온디바이스 비전
+              YOLOv8 하이브리드 ONNX 비전 AI
             </div>
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white m-0">
               안전한 공유 킥보드 반납, <br />
-              AI가 점자블록을 확인합니다
+              AI가 점자블록 침범을 분석합니다
             </h2>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed m-0 pt-1">
-              반납 사진을 촬영하면 AI 모델이 점자블록 침범(Blocked) 및 인근 근접(Near) 여부를
-              실시간 분석하여 안전 반납을 판정합니다.
+              반납 사진을 촬영하면 킥보드 객체 탐지(빨간 박스)와 점자블록 세그멘테이션(노란 마스크)을
+              동시 실행하여 하단 접지부 침범 여부를 실시간 판정합니다.
             </p>
           </div>
         </div>
@@ -194,6 +204,7 @@ export const App: React.FC = () => {
           )}
           <ImageUploader
             selectedImage={selectedImage}
+            overlayImageUrl={prediction?.overlayImageUrl}
             onImageSelect={handleImageSelect}
             onClearImage={handleClearImage}
             onOpenCamera={() => setIsCameraOpen(true)}
@@ -217,12 +228,12 @@ export const App: React.FC = () => {
               {isAnalyzing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>AI 분석 모델 추론 중 (224×224)...</span>
+                  <span>ONNX AI 분석 모델 추론 중 (640×640)...</span>
                 </>
               ) : modelState.status === 'loading' ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>TensorFlow.js 모델 로딩 중...</span>
+                  <span>ONNX 모델 2종 로딩 중...</span>
                 </>
               ) : (
                 <>
@@ -232,7 +243,7 @@ export const App: React.FC = () => {
               )}
             </button>
             <p className="text-center text-[11px] text-slate-400 mt-2">
-              클릭 시 브라우저 내 TensorFlow.js에서 점자블록 및 안전 구역을 판정합니다.
+              클릭 시 브라우저 내 ONNX Runtime Web에서 킥보드 탐지 및 점자블록 마스크를 연산합니다.
             </p>
           </div>
         )}
@@ -245,10 +256,10 @@ export const App: React.FC = () => {
             </div>
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-slate-800 m-0">
-                인공지능 비전 모델 추론 진행 중
+                인공지능 비전 모델 하이브리드 추론 진행 중
               </h3>
               <p className="text-xs text-slate-500 m-0">
-                이미지 리사이징(224×224) ➔ RGB Float32 텐서 변환 ➔ GraphModel 예측
+                Letterbox 640×640 전처리 ➔ Scooter Detection & Braille Segmentation ➔ 접지 영역 공간 분석
               </p>
             </div>
             <div className="h-1.5 w-48 mx-auto bg-slate-100 rounded-full overflow-hidden">
@@ -294,7 +305,7 @@ export const App: React.FC = () => {
           </div>
           <p className="text-xs text-slate-600 m-0 leading-relaxed">
             시각장애인은 노란색 점자블록(점형: 정지/주의, 선형: 직진)을 흰지팡이로 짚으며 보행합니다.
-            블록 위나 30cm 이내에 주차된 킥보드는 심각한 충돌 및 전도 사고로 이어집니다.
+            블록 위나 근접하게 주차된 킥보드는 심각한 충돌 및 전도 사고로 이어집니다.
           </p>
           <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
             <div className="p-2.5 rounded-xl bg-rose-50 text-rose-800 font-medium border border-rose-100">
@@ -317,7 +328,7 @@ export const App: React.FC = () => {
             Safe Parking AI — 모두를 위한 안전한 보행 환경
           </p>
           <p className="text-[11px] text-slate-400 m-0">
-            Built with React, Vite, TypeScript, Tailwind CSS & TensorFlow.js GraphModel
+            Built with React, Vite, TypeScript, Tailwind CSS & ONNX Runtime Web (YOLOv8)
           </p>
           <p className="text-[10px] text-slate-400 m-0">
             본 프로젝트는 실제 모빌리티 사의 반납 API와 연결되지 않은 독립 시연용 서비스입니다.
