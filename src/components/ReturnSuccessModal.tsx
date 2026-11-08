@@ -15,7 +15,7 @@ export const ReturnSuccessModal: React.FC<ReturnSuccessModalProps> = ({
   onClose,
   onReset,
 }) => {
-  if (!isOpen || !prediction) return null;
+  if (!isOpen || !prediction || prediction.verdict !== 'SAFE') return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">

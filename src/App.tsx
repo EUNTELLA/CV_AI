@@ -20,8 +20,8 @@ import { DisclaimerNotice } from './components/DisclaimerNotice';
 export const App: React.FC = () => {
   // State
   const [modelState, setModelState] = useState<ModelState>({ status: 'idle' });
-  const [selectedImage, setSelectedImage] = useState<string | null>('/samples/real_violation.jpg');
-  const [selectedImageName, setSelectedImageName] = useState<string>('점자블록 침범 (실제 사진)');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageName, setSelectedImageName] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<ModelPrediction | null>(null);
@@ -33,6 +33,7 @@ export const App: React.FC = () => {
 
   // Ref to image element used for inference
   const previewImgRef = useRef<HTMLImageElement>(null);
+  const analysisVersion = useRef(0);
 
   // 1. 컴포넌트 마운트 시 실제 YOLOv8 ONNX 모델 2종 로드
   useEffect(() => {
@@ -71,6 +72,9 @@ export const App: React.FC = () => {
 
   // 2. 이미지 선택 핸들러
   const handleImageSelect = (imageUrl: string, sourceName?: string) => {
+    analysisVersion.current += 1;
+    setIsAnalyzing(false);
+    setIsSuccessModalOpen(false);
     setSelectedImage(imageUrl);
     setSelectedImageName(sourceName || '사용자 등록 사진');
     setPrediction(null); // 이전 분석 결과 초기화
@@ -79,6 +83,9 @@ export const App: React.FC = () => {
 
   // 3. 사진 초기화 핸들러
   const handleClearImage = () => {
+    analysisVersion.current += 1;
+    setIsAnalyzing(false);
+    setIsSuccessModalOpen(false);
     setSelectedImage(null);
     setSelectedImageName('');
     setPrediction(null);
@@ -99,29 +106,29 @@ export const App: React.FC = () => {
       return;
     }
 
+    const version = ++analysisVersion.current;
     setIsAnalyzing(true);
     setAnalysisError(null);
 
     try {
       // 이미지 완전 로드 대기
       const img = previewImgRef.current;
-      if (!img.complete) {
-        await new Promise((resolve) => {
-          img.onload = resolve;
-        });
-      }
+      await img.decode();
+      if (version !== analysisVersion.current) return;
 
       // ONNX Runtime Web 기반 하이브리드 추론 실행
       const result = await runHybridParkingInference(img);
+      if (version !== analysisVersion.current) return;
       setPrediction(result);
     } catch (err: any) {
+      if (version !== analysisVersion.current) return;
       console.error('[SafeParkingAI] 추론 오류:', err);
       setAnalysisError(
         err?.message || '이미지 분석 중 오류가 발생했습니다. 다시 시도해 주세요.'
       );
       setPrediction(null);
     } finally {
-      setIsAnalyzing(false);
+      if (version === analysisVersion.current) setIsAnalyzing(false);
     }
   };
 
@@ -181,25 +188,39 @@ export const App: React.FC = () => {
           <div className="relative z-10 space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-medium text-emerald-200">
               <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-              YOLOv8 하이브리드 ONNX 비전 AI
+              공유 킥보드 반납 전 확인
             </div>
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white m-0">
-              안전한 공유 킥보드 반납, <br />
-              AI가 점자블록 침범을 분석합니다
+              여기에 반납해도 될까요? <br />
+              사진으로 반납 가능 여부를 확인하세요
             </h2>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed m-0 pt-1">
-              반납 사진을 촬영하면 킥보드 객체 탐지(빨간 박스)와 점자블록 세그멘테이션(노란 마스크)을
-              동시 실행하여 하단 접지부 침범 여부를 실시간 판정합니다.
+              킥보드와 주변 바닥이 보이도록 촬영해 주세요. 점자블록 침범 여부를 확인해
+              반납 가능, 반납 불가, 재촬영 필요로 안내합니다.
             </p>
           </div>
         </div>
+
+        {/* Prediction Verdict Card */}
+        {prediction && (
+          <VerdictCard
+            prediction={prediction}
+            onRetake={() => {
+              handleClearImage();
+              setIsCameraOpen(true);
+            }}
+            onCompleteReturn={() => {
+              if (prediction.verdict === 'SAFE') setIsSuccessModalOpen(true);
+            }}
+          />
+        )}
 
         {/* Image Uploader & Preset Samples */}
         <section className="space-y-4">
           {selectedImage && selectedImageName && (
             <div className="flex items-center justify-between text-xs px-3 py-1.5 rounded-xl bg-slate-100/90 text-slate-600 border border-slate-200">
               <span className="font-medium truncate">선택된 이미지: {selectedImageName}</span>
-              <span className="text-[11px] text-slate-400 shrink-0">분석 준비완료</span>
+              <span className="text-[11px] text-slate-400 shrink-0">사진 선택됨</span>
             </div>
           )}
           <ImageUploader
@@ -228,22 +249,22 @@ export const App: React.FC = () => {
               {isAnalyzing ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>ONNX AI 분석 모델 추론 중 (640×640)...</span>
+                  <span>반납 가능 여부 확인 중...</span>
                 </>
               ) : modelState.status === 'loading' ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>ONNX 모델 2종 로딩 중...</span>
+                  <span>반납 확인 준비 중...</span>
                 </>
               ) : (
                 <>
                   <Play className="w-5 h-5 fill-current" />
-                  <span>AI 안전 반납 분석 시작</span>
+                  <span>반납 가능 여부 확인하기</span>
                 </>
               )}
             </button>
             <p className="text-center text-[11px] text-slate-400 mt-2">
-              클릭 시 브라우저 내 ONNX Runtime Web에서 킥보드 탐지 및 점자블록 마스크를 연산합니다.
+              사진 확인 → 반납 가능 여부 확인 → 가능할 때 시연용 반납 완료
             </p>
           </div>
         )}
@@ -256,10 +277,10 @@ export const App: React.FC = () => {
             </div>
             <div className="space-y-1">
               <h3 className="text-sm font-bold text-slate-800 m-0">
-                인공지능 비전 모델 하이브리드 추론 진행 중
+                이 위치에 반납할 수 있는지 확인하고 있어요
               </h3>
               <p className="text-xs text-slate-500 m-0">
-                Letterbox 640×640 전처리 ➔ Scooter Detection & Braille Segmentation ➔ 접지 영역 공간 분석
+                킥보드와 점자블록의 위치를 확인하고 있습니다. 잠시 기다려 주세요.
               </p>
             </div>
             <div className="h-1.5 w-48 mx-auto bg-slate-100 rounded-full overflow-hidden">
@@ -274,18 +295,6 @@ export const App: React.FC = () => {
             <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
             <span>{analysisError}</span>
           </div>
-        )}
-
-        {/* Prediction Verdict Card */}
-        {prediction && (
-          <VerdictCard
-            prediction={prediction}
-            onRetake={() => {
-              handleClearImage();
-              setIsCameraOpen(true);
-            }}
-            onCompleteReturn={() => setIsSuccessModalOpen(true)}
-          />
         )}
 
         {/* Tactile Paving Quick Summary Card */}

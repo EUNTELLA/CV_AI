@@ -48,8 +48,8 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       subColor: 'text-emerald-800',
       icon: ShieldCheck,
       iconColor: 'text-emerald-600',
-      title: '정상 주차 판정 (시연용 반납 가능)',
-      tagline: '킥보드와 점자블록이 모두 인식되었으며 충분한 이격 거리가 확보되었습니다.',
+      title: '반납 가능',
+      tagline: '점자블록과의 이격이 확인되었습니다. 시연용 반납을 진행할 수 있습니다.',
     },
     BLOCKED: {
       borderColor: 'border-rose-400',
@@ -60,8 +60,8 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       subColor: 'text-rose-800',
       icon: ShieldAlert,
       iconColor: 'text-rose-600',
-      title: '침범 의심 (반납 차단)',
-      tagline: '킥보드 하단 접지부가 점자블록 마스크와 겹치는 것으로 분석되었습니다.',
+      title: '반납 불가',
+      tagline: '점자블록 침범이 의심됩니다. 킥보드를 옮긴 뒤 다시 촬영해 주세요.',
     },
     UNCLEAR: {
       borderColor: 'border-amber-300',
@@ -72,8 +72,8 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
       subColor: 'text-amber-800',
       icon: AlertTriangle,
       iconColor: 'text-amber-600',
-      title: '추가 확인 필요 (재촬영 권장)',
-      tagline: '점자블록에 근접해 있거나, 대상 객체 중 일부가 탐지되지 않았습니다.',
+      title: '반납 확인 보류 · 재촬영 필요',
+      tagline: '반납 가능 여부를 확정할 수 없습니다. 킥보드와 주변 바닥이 잘 보이도록 다시 촬영해 주세요.',
     },
   }[verdict];
 
@@ -81,6 +81,8 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       className={`rounded-2xl border-2 ${themeConfig.borderColor} ${themeConfig.bgColor} p-5 sm:p-6 shadow-sm space-y-5 animate-in fade-in duration-300`}
     >
       {/* Top Banner: Status & Badge */}
@@ -135,6 +137,47 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="pt-1 flex flex-col sm:flex-row items-center gap-2.5">
+        <button
+          onClick={onRetake}
+          type="button"
+          className="w-full sm:w-1/2 px-4 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+        >
+          <RotateCcw className="w-4 h-4 text-slate-600" />
+          다시 촬영하기
+        </button>
+
+        <button
+          onClick={onCompleteReturn}
+          type="button"
+          disabled={!isSafe}
+          className={`w-full sm:w-1/2 px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all ${
+            isSafe
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer hover:shadow-emerald-600/20 hover:scale-[1.01]'
+              : 'bg-slate-200 text-slate-400 border border-slate-300/60 cursor-not-allowed opacity-80'
+          }`}
+          title={
+            isSafe
+              ? '시연용 반납을 완료합니다'
+              : '안전 이격이 확인되지 않아 반납 버튼이 비활성화되었습니다.'
+          }
+        >
+          {isSafe ? (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              시연용 반납 완료하기
+              <ArrowRight className="w-4 h-4" />
+            </>
+          ) : (
+            <>
+              <Ban className="w-4 h-4 text-slate-400" />
+              {isBlocked ? '반납 불가 · 이동 후 재촬영' : '반납 보류 · 재촬영 필요'}
+            </>
+          )}
+        </button>
       </div>
 
       {/* Detection & Spatial Relationship Cards */}
@@ -260,46 +303,7 @@ export const VerdictCard: React.FC<VerdictCardProps> = ({
         </p>
       </div>
 
-      {/* Action Buttons */}
-      <div className="pt-1 flex flex-col sm:flex-row items-center gap-2.5">
-        <button
-          onClick={onRetake}
-          type="button"
-          className="w-full sm:w-1/2 px-4 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-        >
-          <RotateCcw className="w-4 h-4 text-slate-600" />
-          다시 촬영하기
-        </button>
 
-        <button
-          onClick={onCompleteReturn}
-          type="button"
-          disabled={!isSafe}
-          className={`w-full sm:w-1/2 px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all ${
-            isSafe
-              ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer hover:shadow-emerald-600/20 hover:scale-[1.01]'
-              : 'bg-slate-200 text-slate-400 border border-slate-300/60 cursor-not-allowed opacity-80'
-          }`}
-          title={
-            isSafe
-              ? '시연용 반납을 완료합니다'
-              : '안전 이격이 확인되지 않아 반납 버튼이 비활성화되었습니다.'
-          }
-        >
-          {isSafe ? (
-            <>
-              <CheckCircle className="w-4 h-4" />
-              시연용 반납 완료하기
-              <ArrowRight className="w-4 h-4" />
-            </>
-          ) : (
-            <>
-              <Ban className="w-4 h-4 text-slate-400" />
-              반납 불가 (안전 구역 필요)
-            </>
-          )}
-        </button>
-      </div>
     </div>
   );
 };
