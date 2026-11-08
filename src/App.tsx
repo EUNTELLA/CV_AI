@@ -154,7 +154,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-xl mx-auto px-4 py-5 sm:py-7 space-y-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-6">
         {/* Model Error Alert (Strictly NO fake predictions) */}
         {modelState.status === 'error' && (
           <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 space-y-2">
@@ -203,42 +203,9 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        <section className="rounded-2xl border border-emerald-200 bg-white p-5 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-slate-500">시연 모드 · 예시 결과</span>
-            <button type="button" onClick={() => setDemoReturn(demoReturn === 'idle' ? 'ready' : 'idle')}
-              className="text-sm font-semibold text-emerald-700 cursor-pointer">
-              {demoReturn === 'idle' ? '반납 가능 시연하기' : '시연 종료'}
-            </button>
-          </div>
-          {demoReturn !== 'idle' && (
-            <div role="status" aria-live="polite" className="rounded-xl bg-emerald-50 p-4 space-y-3">
-              <h2 className="text-2xl font-extrabold text-emerald-900 m-0">
-                {demoReturn === 'complete' ? '시연용 반납 완료' : '반납 가능'}
-              </h2>
-              <p className="text-sm text-emerald-800 m-0">발표용 예시 화면입니다. 실제 AI 분석이나 반납 처리 결과가 아닙니다.</p>
-              <button type="button" disabled={demoReturn === 'complete'} onClick={() => setDemoReturn('complete')}
-                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50 cursor-pointer">
-                {demoReturn === 'complete' ? '반납이 완료되었습니다 (시연)' : '시연용 반납 완료하기'}
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* Prediction Verdict Card */}
-        {prediction && (
-          <VerdictCard
-            prediction={prediction}
-            onRetake={() => {
-              handleClearImage();
-              setIsCameraOpen(true);
-            }}
-            onCompleteReturn={() => {
-              if (prediction.verdict === 'SAFE') setIsSuccessModalOpen(true);
-            }}
-          />
-        )}
-
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <section aria-labelledby="photo-panel-title" className="min-w-0 space-y-4">
+            <h2 id="photo-panel-title" className="text-lg font-bold text-slate-900 m-0">1. 사진 넣기</h2>
         {/* Image Uploader & Preset Samples */}
         <section className="space-y-4">
           {selectedImage && selectedImageName && (
@@ -293,6 +260,31 @@ export const App: React.FC = () => {
           </div>
         )}
 
+          </section>
+          <section aria-labelledby="result-panel-title" className="min-w-0 space-y-4">
+            <h2 id="result-panel-title" className="text-lg font-bold text-slate-900 m-0">2. 반납 확인 결과</h2>
+        <section className="rounded-2xl border border-emerald-200 bg-white p-5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold text-slate-500">시연 모드 · 예시 결과</span>
+            <button type="button" onClick={() => setDemoReturn(demoReturn === 'idle' ? 'ready' : 'idle')}
+              className="text-sm font-semibold text-emerald-700 cursor-pointer">
+              {demoReturn === 'idle' ? '반납 가능 시연하기' : '시연 종료'}
+            </button>
+          </div>
+          {demoReturn !== 'idle' && (
+            <div role="status" aria-live="polite" className="rounded-xl bg-emerald-50 p-4 space-y-3">
+              <h2 className="text-2xl font-extrabold text-emerald-900 m-0">
+                {demoReturn === 'complete' ? '시연용 반납 완료' : '반납 가능'}
+              </h2>
+              <p className="text-sm text-emerald-800 m-0">발표용 예시 화면입니다. 실제 AI 분석이나 반납 처리 결과가 아닙니다.</p>
+              <button type="button" disabled={demoReturn === 'complete'} onClick={() => setDemoReturn('complete')}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50 cursor-pointer">
+                {demoReturn === 'complete' ? '반납이 완료되었습니다 (시연)' : '시연용 반납 완료하기'}
+              </button>
+            </div>
+          )}
+        </section>
+
         {/* Analysis Progress Loading State */}
         {isAnalyzing && (
           <div className="rounded-2xl p-6 bg-white border border-emerald-200 shadow-sm text-center space-y-4 animate-pulse">
@@ -321,6 +313,31 @@ export const App: React.FC = () => {
           </div>
         )}
 
+            {!prediction && !isAnalyzing && !analysisError && (
+              <div className="min-h-64 rounded-2xl border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center p-8 text-center space-y-3">
+                <ShieldAlert className="w-9 h-9 text-slate-300" />
+                <h3 className="text-lg font-bold text-slate-700 m-0">반납 가능 여부를 확인해 보세요</h3>
+                <p className="text-sm text-slate-500 m-0">사진을 선택하고 확인 버튼을 누르면<br />이곳에 판정 결과가 표시됩니다.</p>
+              </div>
+            )}
+        {/* Prediction Verdict Card */}
+        {prediction && (
+          <VerdictCard
+            prediction={prediction}
+            onRetake={() => {
+              handleClearImage();
+              setIsCameraOpen(true);
+            }}
+            onCompleteReturn={() => {
+              if (prediction.verdict === 'SAFE') setIsSuccessModalOpen(true);
+            }}
+          />
+        )}
+
+          </section>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         {/* Tactile Paving Quick Summary Card */}
         <section className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
@@ -352,6 +369,7 @@ export const App: React.FC = () => {
 
         {/* Disclaimers & Security Info */}
         <DisclaimerNotice />
+        </div>
       </main>
 
       {/* Footer */}
