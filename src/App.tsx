@@ -26,6 +26,8 @@ export const App: React.FC = () => {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<ModelPrediction | null>(null);
 
+  const [demoReturn, setDemoReturn] = useState<'idle' | 'ready' | 'complete'>('idle');
+
   // Modals
   const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
   const [isGuideOpen, setIsGuideOpen] = useState<boolean>(false);
@@ -200,6 +202,28 @@ export const App: React.FC = () => {
             </p>
           </div>
         </div>
+
+        <section className="rounded-2xl border border-emerald-200 bg-white p-5 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold text-slate-500">시연 모드 · 예시 결과</span>
+            <button type="button" onClick={() => setDemoReturn(demoReturn === 'idle' ? 'ready' : 'idle')}
+              className="text-sm font-semibold text-emerald-700 cursor-pointer">
+              {demoReturn === 'idle' ? '반납 가능 시연하기' : '시연 종료'}
+            </button>
+          </div>
+          {demoReturn !== 'idle' && (
+            <div role="status" aria-live="polite" className="rounded-xl bg-emerald-50 p-4 space-y-3">
+              <h2 className="text-2xl font-extrabold text-emerald-900 m-0">
+                {demoReturn === 'complete' ? '시연용 반납 완료' : '반납 가능'}
+              </h2>
+              <p className="text-sm text-emerald-800 m-0">발표용 예시 화면입니다. 실제 AI 분석이나 반납 처리 결과가 아닙니다.</p>
+              <button type="button" disabled={demoReturn === 'complete'} onClick={() => setDemoReturn('complete')}
+                className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50 cursor-pointer">
+                {demoReturn === 'complete' ? '반납이 완료되었습니다 (시연)' : '시연용 반납 완료하기'}
+              </button>
+            </div>
+          )}
+        </section>
 
         {/* Prediction Verdict Card */}
         {prediction && (
